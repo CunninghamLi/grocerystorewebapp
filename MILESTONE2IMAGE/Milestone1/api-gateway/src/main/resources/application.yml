@@ -1,0 +1,61 @@
+# ========== Default Profile & Common Settings ==========
+server:
+  port: 8080 # API Gateway listens on this port
+  error:
+    include-message: always # Useful for seeing error messages in responses
+
+logging:
+  level:
+    root: INFO
+    com.example.apigateway: DEBUG # Or your specific package for the API Gateway
+
+spring:
+  application:
+    name: api-gateway # Good practice to name your application
+  main:
+    web-application-type: reactive # <--- This is correctly set for reactive
+  config:
+    activate:
+      on-profile: default
+
+# 'app' configuration for the API Gateway's internal service clients (default profile)
+app:
+  customer-service:
+    host: localhost
+    port: 7000
+  product-service:
+    host: localhost
+    port: 7004
+  payment-service:
+    host: localhost
+    port: 7002
+  order-service:
+    host: localhost
+    port: 7001
+
+---
+
+# ========== Docker Profile ==========
+spring:
+  config:
+    activate:
+      on-profile: docker
+  main: # Explicitly set for docker profile as a safeguard
+    web-application-type: reactive
+  # server.port and server.error.include-message will be inherited from the default section
+  # unless explicitly overridden here for the docker profile.
+
+# 'app' configuration for the API Gateway's internal service clients (docker profile)
+app:
+  customer-service:
+    host: customer-service
+    port: 8081
+  product-service:
+    host: product-service
+    port: 8084
+  payment-service:
+    host: payments-service
+    port: 8083
+  order-service:
+    host: order-service
+    port: 8082

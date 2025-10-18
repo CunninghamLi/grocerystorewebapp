@@ -1,0 +1,185 @@
+version: "3.8" # Note: The 'version' attribute is becoming obsolete but kept for now.
+
+services:
+  mysql_server4:
+    image: mysql:latest # Consider pinning to a specific version like mysql:8.0
+    container_name: mysql_server4
+    environment:
+      MYSQL_DATABASE: milestone1
+      MYSQL_USER: user
+      MYSQL_PASSWORD: secretpwd
+      MYSQL_ROOT_PASSWORD: verysecretpwd
+    ports:
+      - "3310:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uuser", "-psecretpwd"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  postgres_payments:
+    image: postgres:13 # Consider pinning to a specific version like postgres:13.14
+    container_name: postgres_payments
+    environment:
+      POSTGRES_DB: paymentsdb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  phpmyadmin4:
+    image: phpmyadmin/phpmyadmin # Consider pinning to a specific version
+    container_name: phpmyadmin4
+    environment:
+      PMA_HOST: mysql_server4
+      PMA_PORT: 3306
+    ports:
+      - "5013:80"
+    depends_on:
+      mysql_server4:
+        condition: service_healthy
+
+  pgadmin:
+    image: dpage/pgadmin4 # Consider pinning to a specific version
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@domain.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "5050:80"
+    depends_on:
+      postgres_payments:
+        condition: service_healthy
+
+  mongo:
+    image: mongo:6
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: orderdb
+    volumes:
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    command: ["mongod", "--bind_ip_all"] # Ensures mongod runs as the main process and listens on all interfaces
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s # Gives mongo more time to initialize, especially with init scripts
+
+  mongo-express:
+    image: mongo-express
+    container_name: mongo-express
+    depends_on:
+      mongo: # mongo-express already depends on mongo
+        condition: service_healthy # Waits for mongo to be healthy
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongo
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: secret
+    ports:
+      - "8085:8081"
+
+  customer-service:
+    build: ./customer-service
+    container_name: customer-service
+    ports:
+      - "7000:8081"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql_server4:3306/milestone1
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: secretpwd
+    depends_on:
+      mysql_server4:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "7001:8082"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/orderdb
+    depends_on:
+      mongo:
+        condition: service_healthy # Waits for mongo to be healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Increased start_period slightly due to mongo dependency
+
+  payments-service:
+    build: ./payments-service
+    container_name: payments-service
+    ports:
+      - "7002:8083"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres_payments:5432/paymentsdb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+    depends_on:
+      postgres_payments:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  product-service:
+    build: ./product-service
+    container_name: product-service
+    ports:
+      - "7004:8084"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql_server4:3306/milestone1
+      SPRING_DATASOURCE_USERNAME: user
+      SPRING_DATASOURCE_PASSWORD: secretpwd
+    depends_on:
+      mysql_server4:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    depends_on: # api-gateway should wait for all backend services to be healthy
+      customer-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy # This will implicitly wait for mongo too
+      payments-service:
+        condition: service_healthy
+      product-service:
+        condition: service_healthy

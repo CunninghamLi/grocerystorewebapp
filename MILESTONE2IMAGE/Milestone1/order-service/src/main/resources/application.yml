@@ -1,0 +1,21 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  # -------------------------------------------------
+  # MongoDB configuration (no more JDBC/JPA here)
+  # -------------------------------------------------
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+
+  # disable any leftover JDBC/DataSource auto-config
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+server:
+  # must match your Docker mapping: 7001:8082
+  port: 8082

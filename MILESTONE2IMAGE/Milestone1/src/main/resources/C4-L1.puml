@@ -1,0 +1,26 @@
+@startuml C4_Context
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+Person(user, "User", "A user of the e-commerce system")
+
+System(apiGateway, "API Gateway", "Routes client requests to the appropriate microservice and aggregates responses")
+System(customerService, "Customer Service", "Manages customer data and exposes a REST API")
+System(orderService, "Order Service", "Stores orders in MongoDB and aggregates data from other services")
+System(paymentsService, "Payments Service", "Handles payment processing and stores transactions in Postgres")
+System(productService, "Product Service", "Manages product catalog and stores data in MySQL")
+
+SystemDb(mysql, "MySQL", "Stores customer and product data")
+SystemDb(mongo, "MongoDB", "Stores order documents")
+SystemDb(postgres, "PostgreSQL", "Stores payment transactions")
+
+Rel(user, apiGateway, "Sends HTTP requests")
+Rel(apiGateway, customerService, "GET/POST/PUT/DELETE /api/v1/customers/{id}")
+Rel(apiGateway, orderService, "GET/POST/PUT/DELETE /api/v1/orders")
+Rel(apiGateway, paymentsService, "GET/POST/PUT/DELETE /api/v1/payments/{id}")
+Rel(apiGateway, productService, "GET/POST/PUT/DELETE /api/v1/products/{id}")
+
+Rel(orderService, mongo, "Reads/Writes orders")
+Rel(customerService, mysql, "Reads/Writes customers")
+Rel(productService, mysql, "Reads/Writes products")
+Rel(paymentsService, postgres, "Reads/Writes payments")
+@enduml

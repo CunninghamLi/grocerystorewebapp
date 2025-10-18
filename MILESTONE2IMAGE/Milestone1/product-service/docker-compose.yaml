@@ -1,0 +1,46 @@
+version: "3.8"
+
+services:
+  mysql_server4:
+    image: mysql:latest
+    container_name: mysql_server4
+    environment:
+      - MYSQL_DATABASE=product-db
+      - MYSQL_USER=user
+      - MYSQL_PASSWORD=secretpwd
+      - MYSQL_ROOT_PASSWORD=verysecretpwd
+    ports:
+      - "3310:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-uuser", "-psecretpwd"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  product-service:
+    build: .
+    container_name: product-service
+    ports:
+      - "7004:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      mysql_server4:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:8084/actuator/health || exit 1" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 150s
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin4
+    ports:
+      - "5013:80"
+    environment:
+      - PMA_HOST=mysql_server4
+      - PMA_PORT=3306
+    depends_on:
+      - mysql_server4

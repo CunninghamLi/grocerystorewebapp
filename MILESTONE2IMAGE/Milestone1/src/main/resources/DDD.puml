@@ -1,0 +1,132 @@
+@startuml DDD\_Grocery\_Store
+
+' Skin for clarity
+skinparam packageBorderColor Black
+skinparam packageBackgroundColor #F0F0F0
+skinparam class {
+BackgroundColor<<Aggregate>> #ADD8E6
+BackgroundColor<<Entity>> #FFFFFF
+BackgroundColor<<ValueObject>> #FFFACD
+BorderColor Black
+}
+skinparam note {
+BackgroundColor #DDFFDD
+BorderColor #008800
+}
+
+' -----------------------
+' Customer Service Context
+' -----------------------
+package "customer-service" {
+class Customer <<Entity>><<Aggregate Root>> {
+ customerId: UUID
+ firstName: String
+ lastName: String
+ emailAddress: String
+ streetAddress: String
+ city: String
+ province: String
+ country: String
+ postalCode: String
+}
+class CustomerIdentifier <<ValueObject>> {
+ customerId: String
+}
+class Address <<ValueObject>> {
+ street: String
+ city: String
+ province: String
+ postalCode: String
+ country: String
+}
+Customer "1" o-- CustomerIdentifier
+Customer "1" o-- Address
+}
+
+' -----------------------
+' Product Service Context
+' -----------------------
+package "product-service" {
+class Product <<Entity>><<Aggregate Root>> {
+ productId: UUID
+ name: String
+ description: String
+ price: BigDecimal
+ currency: Currency
+ stockQuantity: int
+}
+class ProductIdentifier <<ValueObject>> {
+ productId: String
+}
+class Price <<ValueObject>> {
+ amount: BigDecimal
+ currency: Currency
+}
+class StockLevel <<ValueObject>> {
+ quantity: int
+}
+Product "1" o-- ProductIdentifier
+Product "1" o-- Price
+Product "1" o-- StockLevel
+}
+
+' -----------------------
+' Payments Service Context
+' -----------------------
+package "payments-service" {
+class Payment <<Entity>><<Aggregate Root>> {
+ paymentId: UUID
+ method: PaymentMethod
+ status: PaymentStatus
+ amount: BigDecimal
+ currency: Currency
+}
+class PaymentIdentifier <<ValueObject>> {
+ paymentId: String
+}
+class Amount <<ValueObject>> {
+ value: BigDecimal
+ currency: Currency
+}
+Payment "1" o-- PaymentIdentifier
+Payment "1" o-- Amount
+}
+
+' -----------------------
+' Order Service Context (Aggregator)
+' -----------------------
+package "order-service" {
+class Order <<Entity>><<Aggregate Root>> {
+ orderId: UUID
+ customerId: UUID
+ paymentId: UUID
+ status: OrderStatus
+ createdAt: Instant
+ totalAmount: BigDecimal
+}
+class OrderIdentifier <<ValueObject>> {
+ orderId: String
+}
+class OrderItem <<ValueObject>> {
+ productId: UUID
+ quantity: int
+ price: BigDecimal
+}
+Order "1" o-- OrderIdentifier
+Order "1" o-- "\*" OrderItem
+
+ note right of Order
+ <<Invariant>>
+ When an Order is created or updated:
+ • Sum of product ids should match the amount that has been input
+ end note
+}
+
+' -----------------------
+' Context Map Dependencies
+' -----------------------
+"customer-service" --> "order-service"
+"product-service" --> "order-service"
+"payments-service" --> "order-service"
+
+@enduml

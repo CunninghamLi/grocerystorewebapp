@@ -1,0 +1,28 @@
+@startuml C4_Container
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+System_Boundary(milestone1, "E-Commerce Platform") {
+ Container(apiGateway, "API Gateway", "Spring Boot", "Entry point for all client requests; routes and aggregates")
+ Container(orderService, "Order Service", "Spring Boot", "Stores orders; calls other services to enrich order data")
+ Container(customerService, "Customer Service", "Spring Boot", "CRUD operations for customers")
+ Container(paymentsService, "Payments Service", "Spring Boot", "CRUD operations for payments")
+ Container(productService, "Product Service", "Spring Boot", "CRUD operations for products")
+
+ ContainerDb(mysql, "MySQL", "Relational database for customers and products")
+ ContainerDb(mongo, "MongoDB", "Document store for orders")
+ ContainerDb(postgres, "PostgreSQL", "Relational database for payments")
+}
+
+Person(user, "User", "E-commerce end user")
+
+Rel(user, apiGateway, "Uses (HTTP/JSON)")
+Rel(apiGateway, orderService, "REST API (HTTP/JSON)")
+Rel(apiGateway, customerService, "REST API (HTTP/JSON)")
+Rel(apiGateway, paymentsService, "REST API (HTTP/JSON)")
+Rel(apiGateway, productService, "REST API (HTTP/JSON)")
+
+Rel(orderService, mongo, "Reads/Writes order data")
+Rel(customerService, mysql, "Reads/Writes customer data")
+Rel(productService, mysql, "Reads/Writes product data")
+Rel(paymentsService, postgres, "Reads/Writes payment data")
+@enduml

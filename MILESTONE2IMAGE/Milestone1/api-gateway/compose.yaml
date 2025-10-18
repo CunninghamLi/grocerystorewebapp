@@ -1,0 +1,61 @@
+# docker-compose.yml
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8
+    environment:
+      - MYSQL_ROOT_PASSWORD=changeme
+      - MYSQL_DATABASE=appdb
+    ports:
+      - "3306:3306"
+
+  customer-service:
+    build: ./customer-service
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mysql
+    environment: # Recommended for all Spring Boot microservices
+      - SPRING_PROFILES_ACTIVE=docker
+
+  order-service:
+    build: ./order-service
+    ports:
+      - "8082:8082"
+    depends_on:
+      - mysql # Should this be mongo? Order service usually uses MongoDB. Please verify.
+      # If order-service uses MongoDB, it should depend_on your mongo service.
+    environment: # Recommended for all Spring Boot microservices
+      - SPRING_PROFILES_ACTIVE=docker
+
+  payments-service:
+    build: ./payments-service
+    ports:
+      - "8083:8083"
+    depends_on:
+      - mysql # Should this be postgres_payments? Payments service often uses PostgreSQL. Please verify.
+      # If payments-service uses PostgreSQL, it should depend_on your postgres service.
+    environment: # Recommended for all Spring Boot microservices
+      - SPRING_PROFILES_ACTIVE=docker
+
+  product-service:
+    build: ./product-service
+    ports:
+      - "8084:8084"
+    depends_on:
+      - mysql
+    environment: # Recommended for all Spring Boot microservices
+      - SPRING_PROFILES_ACTIVE=docker
+
+  api-gateway:
+    build: ./api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - customer-service
+      - order-service
+      - payments-service
+      - product-service
+    environment: # **** THIS IS CRUCIAL for API Gateway ****
+      - SPRING_PROFILES_ACTIVE=docker

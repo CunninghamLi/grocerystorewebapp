@@ -1,0 +1,32 @@
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+  data:
+    mongodb:
+      uri: ${SPRING_DATA_MONGODB_URI}
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+
+  jpa:
+    enabled: false  # Optional, just to be explicit
+
+spring.modulith.events.jpa.enabled: false  # ✅ THIS disables the module
+
+server:
+  port: 8082
+
+app:
+  payment-service:
+    host: payments-service
+    port: 8083
+  customer-service:
+    host: customer-service
+    port: 8081
+  product-service:
+    host: product-service
+    port: 8084
