@@ -35,7 +35,7 @@ This project demonstrates a simple microservice architecture built with Spring B
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/<username>/grocery-store-microservices.git
+   git clone https://github.com/CunninghamLi/grocerystorewebapp.git
    ```
 2. Open the project in IntelliJ IDEA or VS Code.
 3. Ensure Docker is installed and running.
@@ -74,8 +74,6 @@ grocery-store-microservices/
 ├── payment-service/
 ├── order-service/
 ├── docker-compose.yml
-├── README.md
-└── .env.example
 ```
 
 ---
